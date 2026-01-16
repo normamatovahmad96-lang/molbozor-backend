@@ -3,7 +3,7 @@ const express = require("express");
 const app = express();
 
 app.use(express.json());
-
+const ADMINS = ["971802104"];
 const PORT = process.env.PORT || 3000;
 console.log("PORT:", PORT);
 app.get("/health", (req, res) => {
