@@ -5,7 +5,7 @@ const app = express();
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
-
+console.log("PORT:", PORT);
 app.get("/health", (req, res) => {
   res.status(200).send("ok");
 });
