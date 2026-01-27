@@ -1,7 +1,9 @@
 const express = require("express");
+const cors = require("cors"); // ✅ QO‘SHILDI
 
 const app = express();
 
+app.use(cors());              // ✅ ENG MUHIM QATOR
 app.use(express.json());
 
 const ADMINS = ["971802104"];
@@ -25,18 +27,13 @@ app.get("/api/test", (req, res) => {
 });
 
 // =======================
-// FAKE IN-MEMORY LISTINGS
-// (vaqtincha test uchun)
+// IN-MEMORY LISTINGS
 // =======================
 let listings = [];
 
 // =======================
 // GET LISTINGS
 // =======================
-
-// /listings
-// /api/listings
-// /api/elons   ✅ FRONTEND SHUNI CHAQIRADI
 app.get(
   ["/listings", "/api/listings", "/api/elons"],
   (req, res) => {
@@ -47,10 +44,6 @@ app.get(
 // =======================
 // POST LISTINGS
 // =======================
-
-// /listings
-// /api/listings
-// /api/elons   ✅ FRONTEND SHU YERGA YOZADI
 app.post(
   ["/listings", "/api/listings", "/api/elons"],
   (req, res) => {
