@@ -16,7 +16,7 @@ console.log("PORT:", PORT);
 // MONGODB CONNECT
 // =======================
 mongoose
-  .connect(MONGO_URL)
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB error:", err));
 
