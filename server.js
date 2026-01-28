@@ -1,66 +1,89 @@
-const express = require("express");
-const cors = require("cors"); // ✅ QO‘SHILDI
+TASK: Fix backend connection issues and make ads posting + loading work in production.
 
-const app = express();
+IMPORTANT RULES:
+- Do NOT guess
+- Do NOT add demo/mock data
+- Do NOT change UI design
+- Work ONLY with real backend
+- Use production Render backend only
 
-app.use(cors());              // ✅ ENG MUHIM QATOR
-app.use(express.json());
+BACKEND (already deployed on Render):
+Base URL:
+https://molbozor-backend.onrender.com
 
-const ADMINS = ["971802104"];
-const PORT = process.env.PORT || 3000;
+Backend supports:
+GET  /api/elons        → returns array
+POST /api/elons        → returns 201 with created item
+CORS is enabled
 
-console.log("PORT:", PORT);
+GOALS:
+1) Fix ad posting (POST) so it does NOT show "Serverga ulanishda xatolik"
+2) After posting, ads must be visible on all devices
+3) Bozor feed must load ONLY real data from backend
 
-// =======================
-// HEALTH & TEST
-// =======================
-app.get("/health", (req, res) => {
-  res.status(200).send("ok");
-});
+FRONTEND CHANGES REQUIRED:
 
-app.get("/api/test", (req, res) => {
-  res.status(200).json({
-    ok: true,
-    message: "Molbozor backend is working",
-    timestamp: new Date().toISOString(),
-  });
-});
+A) Posting ads
+File:
+- app/(tabs)/sell.tsx
 
-// =======================
-// IN-MEMORY LISTINGS
-// =======================
-let listings = [];
-
-// =======================
-// GET LISTINGS
-// =======================
-app.get(
-  ["/listings", "/api/listings", "/api/elons"],
-  (req, res) => {
-    res.json(listings);
+Requirements:
+- POST to exactly:
+  https://molbozor-backend.onrender.com/api/elons
+- Send JSON body only:
+  {
+    title: string,
+    price: number,
+    description: string,
+    phone: string
   }
-);
+- Success condition: response.status === 201
+- On success:
+  - show existing success alert
+  - navigate back to Bozor tab
+  - trigger refresh so new ad appears immediately
+- On failure (network or non-201):
+  - show alert text EXACTLY:
+    "Serverga ulanishda xatolik. Qayta urinib ko'ring."
+- Add console logs:
+  - sell_elons_post_start
+  - sell_elons_post_response_status
+  - sell_elons_post_response_body
+  - sell_elons_post_error
 
-// =======================
-// POST LISTINGS
-// =======================
-app.post(
-  ["/listings", "/api/listings", "/api/elons"],
-  (req, res) => {
-    const newListing = {
-      id: Date.now().toString(),
-      ...req.body,
-      createdAt: new Date().toISOString(),
-    };
+B) Loading ads (Bozor feed)
+Files:
+- app/(tabs)/(home)/home.tsx
+- app/(tabs)/(home)/index.tsx
 
-    listings.unshift(newListing);
-    res.status(201).json(newListing);
-  }
-);
+Requirements:
+- GET ONLY from:
+  https://molbozor-backend.onrender.com/api/elons
+- No localhost, no IP, no env fallback
+- States:
+  - loading → show "Loading..."
+  - empty array → show "Hozircha e'lonlar yo'q"
+  - fetch error → show "Serverga ulanishda xatolik"
+- FlatList keyExtractor:
+  - prefer item.id or item._id
+- Add console logs:
+  - elons_fetch_start
+  - elons_fetch_response
+  - elons_fetch_payload
 
-// =======================
-// START SERVER
-// =======================
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`[server] started on port ${PORT}`);
-});
+C) Demo protection
+If any provider or storage exists:
+- Remove or ignore ALL demo/mock/static listings
+- Never seed demo data
+- If persisted old demo data exists, strip it out
+
+EXPECTED RESULT:
+- POST works without error
+- GET returns real data
+- Ads appear instantly after posting
+- Same ads visible on other phones/devices
+- No demo items ever appear again
+
+Return:
+- Only the exact files changed
+- Short explanation of why it now works
