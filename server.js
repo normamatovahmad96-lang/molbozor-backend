@@ -1,41 +1,64 @@
-Task:
-Set up a production-ready Node.js + Express backend with MongoDB (Atlas) for Molbozor.
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+require("dotenv").config();
 
-Requirements (IMPORTANT):
-- NO demo data
-- NO in-memory arrays
-- Use ONLY MongoDB for storage
-- Backend must work on Render
-- Frontend expects HTTP 201 on successful POST
-- API must be stable and simple
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-Environment:
-- MongoDB connection string is provided via environment variable:
-  MONGO_URI
-- App runs on Render, PORT is from process.env.PORT
+const PORT = process.env.PORT || 3000;
+const MONGO_URI = process.env.MONGO_URI;
 
-Backend behavior:
-1) Connect to MongoDB using mongoose and MONGO_URI
-2) If MongoDB connection fails → log error and stop server
-3) Define a Mongoose model "Elon" with fields:
-   - title (string, required)
-   - price (number, required)
-   - description (string, optional)
-   - phone (string, optional)
-   - timestamps enabled
-4) API routes:
-   - GET /health
-     → returns "ok" with status 200
-   - GET /api/elons
-     → returns all elons sorted by newest first (createdAt desc)
-   - POST /api/elons
-     → creates a new elon in MongoDB
-     → returns created object
-     → MUST return status 201 on success
-5) Enable CORS and JSON body parsing
-6) Listen on 0.0.0.0
+console.log("PORT:", PORT);
 
-Provide the FULL server.js file only.
-Do NOT add extra features.
-Do NOT add authentication.
-Do NOT add demo/mock data.
+if (!MONGO_URI) {
+  console.error("❌ MONGO_URI is missing (Render Environment Variables)");
+  process.exit(1);
+}
+
+mongoose
+  .connect(MONGO_URI)
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => {
+    console.error("❌ MongoDB error:", err);
+    process.exit(1);
+  });
+
+const ElonSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    price: { type: Number, required: true },
+    description: { type: String, default: "" },
+    phone: { type: String, default: "" },
+  },
+  { timestamps: true }
+);
+
+const Elon = mongoose.model("Elon", ElonSchema);
+
+app.get("/health", (req, res) => {
+  res.status(200).send("ok");
+});
+
+app.get("/api/elons", async (req, res) => {
+  try {
+    const elons = await Elon.find().sort({ createdAt: -1 });
+    res.status(200).json(elons);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load elons" });
+  }
+});
+
+app.post("/api/elons", async (req, res) => {
+  try {
+    const newElon = await Elon.create(req.body);
+    res.status(201).json(newElon);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`[server] started on port ${PORT}`);
+});
