@@ -4,13 +4,13 @@ const mongoose = require("mongoose");
 
 const app = express();
 
-// kerak bo'lsa keyin CORS ni cheklab qo'yamiz, hozir ochiq
+// hozircha CORS ochiq
 app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// Render -> Environment Variables ichida aynan shu nom bilan bo‘lishi shart:
+// Render -> Environment Variables ichida aynan shu nom bilan bo‘lishi shart
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
@@ -32,7 +32,6 @@ mongoose
 // =======================
 // SCHEMA & MODEL
 // =======================
-// ✅ Qo'shildi: region, image + statistikalar
 const ElonSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
@@ -41,15 +40,15 @@ const ElonSchema = new mongoose.Schema(
     description: { type: String, default: "" },
     phone: { type: String, default: "" },
 
-    // 🔥 Frontend uchun
+    // frontend uchun
     region: { type: String, default: "" },
-    image: { type: String, default: "" }, // hozircha 1 ta rasm url
+    image: { type: String, default: "" }, // hozircha 1 ta rasm URL
 
-    // 🔥 Statistikalar
-    views: { type: Number, default: 0 }, // elon ko'rildi
-    favorites: { type: Number, default: 0 }, // sevimlilar soni
-    phoneClicks: { type: Number, default: 0 }, // telefon bosildi
-    chatClicks: { type: Number, default: 0 }, // chat bosildi
+    // statistikalar
+    views: { type: Number, default: 0 },
+    favorites: { type: Number, default: 0 },
+    phoneClicks: { type: Number, default: 0 },
+    chatClicks: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
@@ -92,6 +91,7 @@ app.post("/api/elons", async (req, res) => {
     if (!title || typeof title !== "string") {
       return res.status(400).json({ error: "title is required" });
     }
+
     const numPrice = Number(price);
     if (!Number.isFinite(numPrice) || numPrice <= 0) {
       return res.status(400).json({ error: "price must be a valid number" });
@@ -114,10 +114,10 @@ app.post("/api/elons", async (req, res) => {
 });
 
 // =======================
-// STATISTICS ENDPOINTS (bosilganda +1 qiladi)
+// STATISTICS ENDPOINTS
 // =======================
 
-// elon ko'rildi
+// elon ko‘rildi
 app.post("/api/elons/:id/view", async (req, res) => {
   try {
     const updated = await Elon.findByIdAndUpdate(
@@ -132,10 +132,9 @@ app.post("/api/elons/:id/view", async (req, res) => {
   }
 });
 
-// sevimlilar (+1 yoki -1)
+// sevimlilar
 app.post("/api/elons/:id/favorite", async (req, res) => {
   try {
-    // body: { action: "add" } yoki { action: "remove" }
     const action = req.body?.action;
     const inc = action === "remove" ? -1 : 1;
 
@@ -146,7 +145,6 @@ app.post("/api/elons/:id/favorite", async (req, res) => {
     );
     if (!updated) return res.status(404).json({ error: "Elon not found" });
 
-    // minus bo'lib ketmasin
     if (updated.favorites < 0) {
       updated.favorites = 0;
       await updated.save();
