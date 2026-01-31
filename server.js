@@ -3,18 +3,14 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 
 const app = express();
-
-// hozircha CORS ochiq
 app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
-
-// Render -> Environment Variables ichida aynan shu nom bilan bo‘lishi shart
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
-  console.error("❌ MONGO_URI is missing. Add it in Render -> Environment Variables.");
+  console.error("❌ MONGO_URI yo‘q (Render → Environment Variables)");
   process.exit(1);
 }
 
@@ -34,15 +30,25 @@ mongoose
 // =======================
 const ElonSchema = new mongoose.Schema(
   {
+    // asosiy
     title: { type: String, required: true, trim: true },
     price: { type: Number, required: true },
-
     description: { type: String, default: "" },
     phone: { type: String, default: "" },
 
-    // frontend uchun
+    // hudud
     region: { type: String, default: "" },
-    image: { type: String, default: "" }, // hozircha 1 ta rasm URL
+    district: { type: String, default: "" },
+
+    // chorva tafsilotlari
+    category: { type: String, default: "" }, // chorva / paranda / baliq / ozuqa
+    gender: { type: String, default: "" },   // erkak / urg‘ochi
+    purpose: { type: String, default: "" },  // go‘sht / tuxum
+    unit: { type: String, default: "" },      // kg / dona
+    quantity: { type: Number, default: 0 },
+
+    // rasmlar (1–4 ta)
+    images: { type: [String], default: [] },
 
     // statistikalar
     views: { type: Number, default: 0 },
@@ -59,7 +65,7 @@ const Elon = mongoose.model("Elon", ElonSchema);
 // HEALTH
 // =======================
 app.get("/health", (req, res) => {
-  res.status(200).send("ok");
+  res.send("ok");
 });
 
 // =======================
@@ -69,7 +75,7 @@ app.get("/api/elons", async (req, res) => {
   try {
     const elons = await Elon.find().sort({ createdAt: -1 });
     res.json(elons);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to load elons" });
   }
 });
@@ -79,116 +85,77 @@ app.get("/api/elons", async (req, res) => {
 // =======================
 app.post("/api/elons", async (req, res) => {
   try {
-    const {
-      title,
-      price,
-      description = "",
-      phone = "",
-      region = "",
-      image = "",
-    } = req.body || {};
+    const data = req.body || {};
 
-    if (!title || typeof title !== "string") {
-      return res.status(400).json({ error: "title is required" });
-    }
-
-    const numPrice = Number(price);
-    if (!Number.isFinite(numPrice) || numPrice <= 0) {
-      return res.status(400).json({ error: "price must be a valid number" });
+    if (!data.title || !data.price) {
+      return res.status(400).json({ error: "title va price majburiy" });
     }
 
     const newElon = await Elon.create({
-      title: title.trim(),
-      price: numPrice,
-      description: typeof description === "string" ? description : "",
-      phone: typeof phone === "string" ? phone : "",
-      region: typeof region === "string" ? region : "",
-      image: typeof image === "string" ? image : "",
+      title: data.title,
+      price: Number(data.price),
+      description: data.description || "",
+      phone: data.phone || "",
+      region: data.region || "",
+      district: data.district || "",
+      category: data.category || "",
+      gender: data.gender || "",
+      purpose: data.purpose || "",
+      unit: data.unit || "",
+      quantity: Number(data.quantity || 0),
+      images: Array.isArray(data.images) ? data.images.slice(0, 4) : [],
     });
 
     res.status(201).json(newElon);
-  } catch (err) {
-    console.error(err);
+  } catch (e) {
+    console.error(e);
     res.status(500).json({ error: "Server error" });
   }
 });
 
 // =======================
-// STATISTICS ENDPOINTS
+// STATISTICS
 // =======================
-
-// elon ko‘rildi
 app.post("/api/elons/:id/view", async (req, res) => {
-  try {
-    const updated = await Elon.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { views: 1 } },
-      { new: true }
-    );
-    if (!updated) return res.status(404).json({ error: "Elon not found" });
-    res.json({ ok: true, views: updated.views });
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
+  const elon = await Elon.findByIdAndUpdate(
+    req.params.id,
+    { $inc: { views: 1 } },
+    { new: true }
+  );
+  res.json(elon);
 });
 
-// sevimlilar
 app.post("/api/elons/:id/favorite", async (req, res) => {
-  try {
-    const action = req.body?.action;
-    const inc = action === "remove" ? -1 : 1;
-
-    const updated = await Elon.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { favorites: inc } },
-      { new: true }
-    );
-    if (!updated) return res.status(404).json({ error: "Elon not found" });
-
-    if (updated.favorites < 0) {
-      updated.favorites = 0;
-      await updated.save();
-    }
-
-    res.json({ ok: true, favorites: updated.favorites });
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
+  const inc = req.body?.action === "remove" ? -1 : 1;
+  const elon = await Elon.findByIdAndUpdate(
+    req.params.id,
+    { $inc: { favorites: inc } },
+    { new: true }
+  );
+  res.json(elon);
 });
 
-// telefon bosildi
 app.post("/api/elons/:id/phone-click", async (req, res) => {
-  try {
-    const updated = await Elon.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { phoneClicks: 1 } },
-      { new: true }
-    );
-    if (!updated) return res.status(404).json({ error: "Elon not found" });
-    res.json({ ok: true, phoneClicks: updated.phoneClicks });
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
+  const elon = await Elon.findByIdAndUpdate(
+    req.params.id,
+    { $inc: { phoneClicks: 1 } },
+    { new: true }
+  );
+  res.json(elon);
 });
 
-// chat bosildi
 app.post("/api/elons/:id/chat-click", async (req, res) => {
-  try {
-    const updated = await Elon.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { chatClicks: 1 } },
-      { new: true }
-    );
-    if (!updated) return res.status(404).json({ error: "Elon not found" });
-    res.json({ ok: true, chatClicks: updated.chatClicks });
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
+  const elon = await Elon.findByIdAndUpdate(
+    req.params.id,
+    { $inc: { chatClicks: 1 } },
+    { new: true }
+  );
+  res.json(elon);
 });
 
 // =======================
-// START SERVER
+// START
 // =======================
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`[server] started on port ${PORT}`);
+  console.log(`🚀 Server ${PORT} portda ishlayapti`);
 });
