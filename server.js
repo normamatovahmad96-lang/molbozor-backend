@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const ImageKit = require("imagekit"); // ✅ QO‘SHILDI
 
 const app = express();
 app.use(cors());
@@ -26,6 +27,15 @@ mongoose
   });
 
 // =======================
+// IMAGEKIT INIT  ✅ YANGI
+// =======================
+const imagekit = new ImageKit({
+  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+});
+
+// =======================
 // SCHEMA & MODEL
 // =======================
 const ElonSchema = new mongoose.Schema(
@@ -41,10 +51,10 @@ const ElonSchema = new mongoose.Schema(
     district: { type: String, default: "" },
 
     // chorva tafsilotlari
-    category: { type: String, default: "" }, // chorva / paranda / baliq / ozuqa
-    gender: { type: String, default: "" },   // erkak / urg‘ochi
-    purpose: { type: String, default: "" },  // go‘sht / tuxum
-    unit: { type: String, default: "" },      // kg / dona
+    category: { type: String, default: "" },
+    gender: { type: String, default: "" },
+    purpose: { type: String, default: "" },
+    unit: { type: String, default: "" },
     quantity: { type: Number, default: 0 },
 
     // rasmlar (1–4 ta)
@@ -66,6 +76,19 @@ const Elon = mongoose.model("Elon", ElonSchema);
 // =======================
 app.get("/health", (req, res) => {
   res.send("ok");
+});
+
+// =======================
+// IMAGEKIT AUTH  ✅ YANGI
+// =======================
+app.get("/api/imagekit/auth", (req, res) => {
+  try {
+    const authParams = imagekit.getAuthenticationParameters();
+    res.json(authParams);
+  } catch (err) {
+    console.error("ImageKit auth error:", err);
+    res.status(500).json({ error: "ImageKit auth failed" });
+  }
 });
 
 // =======================
