@@ -1,7 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const ImageKit = require("imagekit"); // ✅ QO‘SHILDI
+const ImageKit = require("imagekit");
+const multer = require("multer");
 
 const app = express();
 app.use(cors());
@@ -27,12 +28,20 @@ mongoose
   });
 
 // =======================
-// IMAGEKIT INIT  ✅ YANGI
+// IMAGEKIT INIT
 // =======================
 const imagekit = new ImageKit({
   publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
   privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
   urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+});
+
+// =======================
+// MULTER (RAM STORAGE)
+// =======================
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
 // =======================
@@ -57,7 +66,7 @@ const ElonSchema = new mongoose.Schema(
     unit: { type: String, default: "" },
     quantity: { type: Number, default: 0 },
 
-    // rasmlar (1–4 ta)
+    // rasmlar (URL lar)
     images: { type: [String], default: [] },
 
     // statistikalar
@@ -79,15 +88,26 @@ app.get("/health", (req, res) => {
 });
 
 // =======================
-// IMAGEKIT AUTH  ✅ YANGI
+// IMAGE UPLOAD (BACKEND → IMAGEKIT) ⭐ ASOSIY
 // =======================
-app.get("/api/imagekit/auth", (req, res) => {
+app.post("/api/upload-image", upload.single("image"), async (req, res) => {
   try {
-    const authParams = imagekit.getAuthenticationParameters();
-    res.json(authParams);
+    if (!req.file) {
+      return res.status(400).json({ error: "Rasm topilmadi" });
+    }
+
+    const result = await imagekit.upload({
+      file: req.file.buffer,
+      fileName: req.file.originalname,
+      folder: "molbozor",
+    });
+
+    res.json({
+      url: result.url, // 🔥 FRONTEND SHUNI SAQLAYDI
+    });
   } catch (err) {
-    console.error("ImageKit auth error:", err);
-    res.status(500).json({ error: "ImageKit auth failed" });
+    console.error("❌ IMAGE UPLOAD ERROR:", err);
+    res.status(500).json({ error: "Image upload failed" });
   }
 });
 
@@ -177,7 +197,7 @@ app.post("/api/elons/:id/chat-click", async (req, res) => {
 });
 
 // =======================
-// START
+// START SERVER
 // =======================
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server ${PORT} portda ishlayapti`);
