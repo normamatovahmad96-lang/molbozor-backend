@@ -1,8 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const ImageKit = require("imagekit");
 const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
 
 const app = express();
 app.use(cors());
@@ -28,12 +28,12 @@ mongoose
   });
 
 // =======================
-// IMAGEKIT INIT
+// CLOUDINARY INIT ✅ ASOSIY
 // =======================
-const imagekit = new ImageKit({
-  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
-  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
-  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 // =======================
@@ -49,27 +49,22 @@ const upload = multer({
 // =======================
 const ElonSchema = new mongoose.Schema(
   {
-    // asosiy
     title: { type: String, required: true, trim: true },
     price: { type: Number, required: true },
     description: { type: String, default: "" },
     phone: { type: String, default: "" },
 
-    // hudud
     region: { type: String, default: "" },
     district: { type: String, default: "" },
 
-    // chorva tafsilotlari
     category: { type: String, default: "" },
     gender: { type: String, default: "" },
     purpose: { type: String, default: "" },
     unit: { type: String, default: "" },
     quantity: { type: Number, default: 0 },
 
-    // rasmlar (URL lar)
     images: { type: [String], default: [] },
 
-    // statistikalar
     views: { type: Number, default: 0 },
     favorites: { type: Number, default: 0 },
     phoneClicks: { type: Number, default: 0 },
@@ -88,7 +83,7 @@ app.get("/health", (req, res) => {
 });
 
 // =======================
-// IMAGE UPLOAD (BACKEND → IMAGEKIT) ⭐ ASOSIY
+// IMAGE UPLOAD → CLOUDINARY ⭐ ENG MUHIM JOY
 // =======================
 app.post("/api/upload-image", upload.single("image"), async (req, res) => {
   try {
@@ -96,17 +91,24 @@ app.post("/api/upload-image", upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "Rasm topilmadi" });
     }
 
-    const result = await imagekit.upload({
-      file: req.file.buffer,
-      fileName: req.file.originalname,
-      folder: "molbozor",
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          folder: "molbozor",
+          resource_type: "image",
+        },
+        (error, uploadResult) => {
+          if (error) return reject(error);
+          resolve(uploadResult);
+        }
+      ).end(req.file.buffer);
     });
 
     res.json({
-      url: result.url, // 🔥 FRONTEND SHUNI SAQLAYDI
+      url: result.secure_url, // 🔥 SHUNI FRONTEND SAQLAYDI
     });
   } catch (err) {
-    console.error("❌ IMAGE UPLOAD ERROR:", err);
+    console.error("❌ CLOUDINARY UPLOAD ERROR:", err);
     res.status(500).json({ error: "Image upload failed" });
   }
 });
