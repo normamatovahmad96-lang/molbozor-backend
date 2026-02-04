@@ -28,7 +28,7 @@ mongoose
   });
 
 // =======================
-// CLOUDINARY INIT ✅ ASOSIY
+// CLOUDINARY INIT ✅
 // =======================
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -63,6 +63,7 @@ const ElonSchema = new mongoose.Schema(
     unit: { type: String, default: "" },
     quantity: { type: Number, default: 0 },
 
+    // 🔥 FAQAT URL LAR SAQLANADI
     images: { type: [String], default: [] },
 
     views: { type: Number, default: 0 },
@@ -83,7 +84,7 @@ app.get("/health", (req, res) => {
 });
 
 // =======================
-// IMAGE UPLOAD → CLOUDINARY ⭐ ENG MUHIM JOY
+// IMAGE UPLOAD → CLOUDINARY ⭐ ASOSIY
 // =======================
 app.post("/api/upload-image", upload.single("image"), async (req, res) => {
   try {
@@ -91,21 +92,21 @@ app.post("/api/upload-image", upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "Rasm topilmadi" });
     }
 
-    const result = await new Promise((resolve, reject) => {
+    const uploadResult = await new Promise((resolve, reject) => {
       cloudinary.uploader.upload_stream(
         {
           folder: "molbozor",
           resource_type: "image",
         },
-        (error, uploadResult) => {
+        (error, result) => {
           if (error) return reject(error);
-          resolve(uploadResult);
+          resolve(result);
         }
       ).end(req.file.buffer);
     });
 
     res.json({
-      url: result.secure_url, // 🔥 SHUNI FRONTEND SAQLAYDI
+      url: uploadResult.secure_url, // ✅ FRONTEND SHUNI SAQLAYDI
     });
   } catch (err) {
     console.error("❌ CLOUDINARY UPLOAD ERROR:", err);
