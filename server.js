@@ -131,6 +131,103 @@ app.get("/health", (req, res) => {
   res.send("ok");
 });
 
+
+// ======================================================
+// ✅ ADMIN AUTH (YANGI) — /health dan keyin joylashdi
+// ======================================================
+function normalizeEmail(email) {
+  return String(email || "").toLowerCase().trim();
+}
+
+function isAdminEmail(email) {
+  const adminEmail = normalizeEmail(process.env.ADMIN_EMAIL);
+  return adminEmail && normalizeEmail(email) === adminEmail;
+}
+
+function signAdminToken(payload) {
+  const secret = process.env.ADMIN_JWT_SECRET;
+  if (!secret) throw new Error("ADMIN_JWT_SECRET yo‘q");
+  return jwt.sign(payload, secret, { expiresIn: "7d" });
+}
+
+function verifyAdminToken(token) {
+  const secret = process.env.ADMIN_JWT_SECRET;
+  if (!secret) throw new Error("ADMIN_JWT_SECRET yo‘q");
+  return jwt.verify(token, secret);
+}
+
+function adminAuth(req, res, next) {
+  try {
+    const header = req.headers.authorization || "";
+    const parts = header.split(" ");
+
+    if (parts.length !== 2 || parts[0] !== "Bearer") {
+      return res.status(401).json({ message: "Admin token yo‘q" });
+    }
+
+    const token = parts[1];
+    const decoded = verifyAdminToken(token);
+
+    req.admin = decoded;
+    return next();
+  } catch (e) {
+    return res.status(401).json({ message: "Admin token noto‘g‘ri" });
+  }
+}
+
+// =======================
+// ADMIN: LOGIN (YANGI)
+// =======================
+app.post("/admin/login", async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email va parol kerak" });
+    }
+
+    if (!isAdminEmail(email)) {
+      return res.status(403).json({ message: "Admin emas" });
+    }
+
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword) {
+      return res.status(500).json({ message: "ADMIN_PASSWORD yo‘q" });
+    }
+
+    if (String(password) !== String(adminPassword)) {
+      return res.status(401).json({ message: "Parol noto‘g‘ri" });
+    }
+
+    const token = signAdminToken({
+      role: "admin",
+      email: normalizeEmail(email),
+    });
+
+    return res.json({
+      message: "Admin login bo‘ldi",
+      adminToken: token,
+      admin: { email: normalizeEmail(email), role: "admin" },
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: "Server xatosi" });
+  }
+});
+
+// =======================
+// ADMIN: ME (YANGI)
+// =======================
+app.get("/admin/me", adminAuth, async (req, res) => {
+  return res.json({
+    admin: {
+      email: req.admin.email,
+      role: req.admin.role,
+    },
+  });
+});
+
+
 // =======================
 // AUTH: SEND EMAIL OTP
 // =======================
