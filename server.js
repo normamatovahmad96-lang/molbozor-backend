@@ -330,7 +330,7 @@ const otpLimiter = rateLimit({
 // =======================
 // ADMIN: LOGIN
 // =======================
-app.post("/admin/login", otpLimiter, async (req, res) => {
+app.post("/api/admin/login", otpLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
 
@@ -367,7 +367,7 @@ app.post("/admin/login", otpLimiter, async (req, res) => {
   }
 });
 
-app.get("/admin/me", adminAuth, async (req, res) => {
+app.get("/api/admin/me", adminAuth, async (req, res) => {
   return res.json({
     admin: {
       email: req.admin.email,
@@ -379,7 +379,7 @@ app.get("/admin/me", adminAuth, async (req, res) => {
 // =======================
 // AUTH: SEND EMAIL OTP
 // =======================
-app.post("/auth/email/send-otp", otpLimiter, async (req, res) => {
+app.post("/api/auth/email/send-otp", otpLimiter, async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -461,7 +461,7 @@ app.post("/auth/email/send-otp", otpLimiter, async (req, res) => {
 // =======================
 // AUTH: VERIFY EMAIL OTP
 // =======================
-app.post("/auth/email/verify-otp", otpLimiter, async (req, res) => {
+app.post("/api/auth/email/verify-otp", otpLimiter, async (req, res) => {
   try {
     const { email, code } = req.body;
 
